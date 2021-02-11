@@ -17,12 +17,14 @@ from selenium.webdriver.chrome.options import Options
 
 
 # -----------------------------------------------------------------------------
-def get_bin_filenames(webpage) -> list:
+def get_server_binfile_names(webpage) -> list:
     """From  the micropython esp32 download page, get the names of the available binary files
 
     :param webpage: URL of the webpage to inspect
     :returns: list of available bin filenames on the server
     """
+
+    print(f"Determining binfiles available on {webpage}")
 
     filenames = []
 
@@ -34,6 +36,7 @@ def get_bin_filenames(webpage) -> list:
 
     references = browser.find_elements_by_css_selector('a')
     for ref in references:
+        # From all the references, filter out the esp32 bin files
         if ref.text.startswith("esp32-") and ref.text.endswith(".bin"):
             filenames.append(ref.text)
 
@@ -42,16 +45,19 @@ def get_bin_filenames(webpage) -> list:
 
 
 # -----------------------------------------------------------------------------
-def get_local_binfiles(target_folder) -> list:
+def get_local_binfile_names(target_folder) -> list:
     """Create a list of already downloaded micropython bin files.
 
     :param target_folder: folder to inspect for binfiles
     :return: list of available files.
     """
 
-    local_filelist = []
+    print(f"Determining binfiles available lcoally in {target_folder}")
 
+    # We are only interested in the esp32 bin files
     local_bin_files = pathlib.Path(target_folder).glob("esp32-*.bin")
+
+    local_filelist = []
     for filename in local_bin_files:
         local_filelist.append(filename.name)
 
@@ -66,6 +72,8 @@ def download_binfile(webpage, filename, targetfolder):
     :param targetfolder: Local folder to save the file in
     """
 
+    print(f"Downloading {filename} to {targetfolder}")
+
     url = f"{webpage}/{filename}"
     print(f"{url=}")
 
@@ -78,8 +86,10 @@ def download_binfile(webpage, filename, targetfolder):
         f.write(r.content)
 
 
+
+
 # -----------------------------------------------------------------------------
-def main():
+def main() -> None:
 
     # Read the configuration file
     config = configparser.ConfigParser()
@@ -87,20 +97,33 @@ def main():
 
     # From the ESP32 webpage, get the names of the available bin files
     webpage = config['server'].get('webpage')
-    server_bin_files = get_bin_filenames(webpage)
-    print(f"Webserver files = {server_bin_files}")
+    server_bin_files = get_server_binfile_names(webpage)
+    print(f"Webserver bin files = {server_bin_files}\n")
 
     # Determine which binfiles are already downloaded
     target_folder = config['local'].get('targetfolder')
-    local_bin_files = get_local_binfiles(target_folder)
-    print(f"Local file list: {local_bin_files}")
+    local_bin_files = get_local_binfile_names(target_folder)
+    print(f"Local bin files: {local_bin_files}\n")
+
+    # Determine which binfiles should still be downloaded
+    missing_files = [filename for filename in server_bin_files if filename not in local_bin_files]
+    include_unstable = config['options'].getboolean('include_unstable')
+
+    if not include_unstable:
+        print("Filtering out unstable bin files")
+        missing_files = [filename for filename in missing_files if 'unstable' not in filename]
+        print(f"New list: {missing_files}\n")
+
+    if not missing_files:
+        print(f"{target_folder} is up-to-date.\n")
+        return
+    else:
+        print(f"Missing binfiles: {missing_files}\n")
 
     # Download the missing bin files from the micropython web server
     downloadpage = config['server'].get('downloadpage')
-    for filename in server_bin_files:
-        if filename not in local_bin_files:
-            print(f"Downloading {filename} to {target_folder}")
-            download_binfile(downloadpage, filename, target_folder)
+    for filename in missing_files:
+        download_binfile(downloadpage, filename, target_folder)
 
 
 # -----------------------------------------------------------------------------
