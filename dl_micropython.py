@@ -1,7 +1,7 @@
 """Download micropython ESP32 binaries from https://micropython.org/download/esp32/
 Only the missing binaries will be downloaded.
 
-This list of files will be determined with 'selenium' and the downloads are done with 'requests'
+This list of files and the downloads are done with 'requests'
 
 20210211, HenkA, version 1.0
 """
@@ -10,10 +10,7 @@ This list of files will be determined with 'selenium' and the downloads are done
 import configparser
 import pathlib
 import requests
-
-# 3rd party imports
-from selenium.webdriver import Chrome
-from selenium.webdriver.chrome.options import Options
+import re
 
 
 # -----------------------------------------------------------------------------
@@ -28,19 +25,14 @@ def get_server_binfile_names(webpage) -> list:
 
     filenames = []
 
-    opts = Options()
-    opts.headless = True
-    assert opts.headless # Operating in headless mode
-    browser = Chrome(options=opts)
-    browser.get(webpage)
+    r = requests.get(webpage)
+    
+    regex = r"(esp32-.*\.bin)\""
+    matches = re.finditer(regex, r.text, re.MULTILINE)
+    
+    for index,item in enumerate(matches,start=1):
+        filenames.append(item.group(1))
 
-    references = browser.find_elements_by_css_selector('a')
-    for ref in references:
-        # From all the references, filter out the esp32 bin files
-        if ref.text.startswith("esp32-") and ref.text.endswith(".bin"):
-            filenames.append(ref.text)
-
-    browser.close()
     return filenames
 
 
