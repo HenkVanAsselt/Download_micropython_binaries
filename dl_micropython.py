@@ -2,8 +2,10 @@
 Only the missing binaries will be downloaded.
 
 This list of files will be determined with 'selenium' and the downloads are done with 'requests'
+Alternatively, one could also use 'requests' and 're' and skip the selenium part.
 
-20210211, HenkA, version 1.0
+20210211, HenkA, V1.0
+20210225, HenkA, V1.1
 """
 
 # Global imports
@@ -30,7 +32,7 @@ def get_server_binfile_names(webpage) -> list:
 
     opts = Options()
     opts.headless = True
-    assert opts.headless # Operating in headless mode
+    assert opts.headless  # Operate in headless mode, i.e. do not show a browser window
     browser = Chrome(options=opts)
     browser.get(webpage)
 
@@ -41,7 +43,23 @@ def get_server_binfile_names(webpage) -> list:
             filenames.append(ref.text)
 
     browser.close()
+
     return filenames
+
+    # Alternative code without the use of selenium (credits go to "nursanamar")
+
+    # import re
+    #
+    # filenames = []
+    # r = requests.get(webpage)
+    #
+    # regex = r"(esp32-.*\.bin)\""
+    # matches = re.finditer(regex, r.text, re.MULTILINE)
+    #
+    # for index,item in enumerate(matches,start=1):
+    #     filenames.append(item.group(1))
+    #
+    # return filenames
 
 
 # -----------------------------------------------------------------------------
@@ -62,6 +80,7 @@ def get_local_binfile_names(target_folder) -> list:
         local_filelist.append(filename.name)
 
     return local_filelist
+
 
 # -----------------------------------------------------------------------------
 def download_binfile(webpage, filename, targetfolder):
@@ -84,8 +103,6 @@ def download_binfile(webpage, filename, targetfolder):
 
     with open(targetfile, 'wb') as f:
         f.write(r.content)
-
-
 
 
 # -----------------------------------------------------------------------------
