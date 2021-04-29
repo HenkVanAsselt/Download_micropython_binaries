@@ -107,6 +107,7 @@ def download_binfile(webpage, filename, targetfolder):
 
 # -----------------------------------------------------------------------------
 def main() -> None:
+    """Main function of this module."""
 
     # Read the configuration file
     config = configparser.ConfigParser()
