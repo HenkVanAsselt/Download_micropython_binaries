@@ -9,6 +9,7 @@ Alternatively, one could also use 'requests' and 're' and skip the selenium part
 """
 
 # Global imports
+import sys
 import configparser
 import pathlib
 import requests
@@ -16,6 +17,7 @@ import requests
 # 3rd party imports
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 
 # -----------------------------------------------------------------------------
@@ -28,38 +30,41 @@ def get_server_binfile_names(webpage) -> list:
 
     print(f"Determining binfiles available on {webpage}")
 
-    filenames = []
-
-    opts = Options()
-    opts.headless = True
-    assert opts.headless  # Operate in headless mode, i.e. do not show a browser window
-    browser = Chrome(options=opts)
-    browser.get(webpage)
-
-    references = browser.find_elements_by_css_selector('a')
-    for ref in references:
-        # From all the references, filter out the esp32 bin files
-        if ref.text.startswith("esp32-") and ref.text.endswith(".bin"):
-            filenames.append(ref.text)
-
-    browser.close()
-
-    return filenames
+    # opts = Options()
+    # opts.headless = True
+    # assert opts.headless  # Operate in headless mode, i.e. do not show a browser window
+    # browser = Chrome(options=opts)
+    # browser.get(webpage)
+    #
+    # # 20220104: DeprecationWarning: find_elements_by_* commands are deprecated. Please use find_elements() instead
+    # # references = browser.find_elements_by_css_selector('a')
+    # # Unfortunately, this does not work out...
+    # references = browser.find_elements(By.TAG_NAME, "a")
+    # print(f"{references=}")
+    # for ref in references:
+    #     # From all the references, filter out the esp32 bin files
+    #     print(ref.text)
+    #     if ref.text.startswith("esp32-") and ref.text.endswith(".bin"):
+    #         filenames.append(ref.text)
+    #
+    # browser.close()
+    #
+    # return filenames
 
     # Alternative code without the use of selenium (credits go to "nursanamar")
 
-    # import re
-    #
-    # filenames = []
-    # r = requests.get(webpage)
-    #
-    # regex = r"(esp32-.*\.bin)\""
-    # matches = re.finditer(regex, r.text, re.MULTILINE)
-    #
-    # for index,item in enumerate(matches,start=1):
-    #     filenames.append(item.group(1))
-    #
-    # return filenames
+    import re
+
+    filenames = []
+    r = requests.get(webpage)
+
+    regex = r"(.*ESP32_.*\.bin)\""
+    matches = re.finditer(regex, r.text, re.MULTILINE)
+
+    for index,item in enumerate(matches,start=1):
+        filenames.append(item.group(1))
+
+    return filenames
 
 
 # -----------------------------------------------------------------------------
@@ -116,7 +121,11 @@ def main() -> None:
     # From the ESP32 webpage, get the names of the available bin files
     webpage = config['server'].get('webpage')
     server_bin_files = get_server_binfile_names(webpage)
-    print(f"Webserver bin files = {server_bin_files}\n")
+    if server_bin_files:
+        print(f"Webserver bin files = {server_bin_files}\n")
+    else:
+        print(f"Could not determine any binfiles on the server page {webpage}")
+        sys.exit(1)
 
     # Determine which binfiles are already downloaded
     target_folder = config['local'].get('targetfolder')
@@ -146,4 +155,7 @@ def main() -> None:
 
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
+
+    print("Was working, but not on 20231213 anymore...")
+    sys.exit(-2)
     main()
